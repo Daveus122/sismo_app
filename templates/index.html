@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Sismos Chile Monitor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .map-container {
+            height: 500px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .card {
+            border-radius: 15px;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .5
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+    <nav class="navbar navbar-dark bg-danger mb-4 shadow">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">🇨🇱 Monitor de Sismos - Actividad 4</span>
+        </div>
+    </nav>
+
+    <div id="alerta-sismo" style="display:none" class="container mb-3">
+        <div id="alerta-box" class="p-3 rounded-3 border">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span id="alerta-dot" style="width:12px;height:12px;border-radius:50%;display:inline-block"></span>
+                <strong id="alerta-titulo" style="font-size:15px"></strong>
+            </div>
+            <div id="alerta-texto" style="font-size:13px" class="mb-2"></div>
+            <div id="alerta-detalle"
+                style="display:none;font-size:13px;background:white;border-radius:8px;padding:10px 12px">
+                <div class="row g-2">
+                    <div class="col-6"><small class="text-muted d-block">Magnitud</small><strong id="d-mag"></strong>
+                    </div>
+                    <div class="col-6"><small class="text-muted d-block">Distancia</small><strong id="d-dist"></strong>
+                    </div>
+                    <div class="col-12"><small class="text-muted d-block">Lugar</small><span id="d-lugar"></span></div>
+                    <div class="col-12"><small class="text-muted d-block">Hora</small><span id="d-hora"></span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mb-4">
+                <div class="card p-3 shadow-sm bg-white">
+                    <h4 class="mb-3">Mapa de Actividad</h4>
+                    <div class="map-container">{{ mapa|safe }}</div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card p-3 shadow-sm bg-white">
+                    <h4 class="mb-3">Últimos Eventos</h4>
+                    <div class="list-group list-group-flush" style="max-height:450px;overflow-y:auto;">
+                        {% for s in sismos %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1 text-danger">{{ s[2] }} Mag</h5>
+                                <small class="text-muted">{{ s[1].strftime('%H:%M') if s[1] else '--:--' }}</small>
+                            </div>
+                            <p class="mb-1 small text-secondary">{{ s[5] }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script id="sismos-data" type="application/json">{{ sismos_json | safe }}</script>
+
+    <script>
+        const RADIO_KM = 100;
+        const sismos = JSON.parse(document.getElementById('sismos-data').textContent);
+
+        function calcularDistancia(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        function verificarCercania(userLat, userLon) {
+            const caja = document.getElementById('alerta-sismo');
+            const box = document.getElementById('alerta-box');
+            const dot = document.getElementById('alerta-dot');
+            const titulo = document.getElementById('alerta-titulo');
+            const texto = document.getElementById('alerta-texto');
+            const detalle = document.getElementById('alerta-detalle');
+
+            let sismoMasCercano = null;
+            let distanciaMinima = Infinity;
+
+            for (const s of sismos) {
+                const dist = calcularDistancia(userLat, userLon, s.lat, s.lon);
+                if (dist < distanciaMinima) {
+                    distanciaMinima = dist;
+                    sismoMasCercano = { ...s, distancia: Math.round(dist) };
+                }
+            }
+
+            caja.style.display = 'block';
+
+            if (sismoMasCercano && distanciaMinima <= RADIO_KM) {
+                box.style.background = '#FCEBEB';
+                box.style.borderColor = '#E24B4A';
+                dot.style.background = '#E24B4A';
+                dot.style.animation = 'pulse 1.4s ease-in-out infinite';
+                titulo.textContent = 'Sismo cercano detectado';
+                titulo.style.color = '#791F1F';
+                texto.textContent = `Hay un sismo a ${sismoMasCercano.distancia} km de tu ubicación actual.`;
+                texto.style.color = '#A32D2D';
+                detalle.style.display = 'block';
+                detalle.style.borderColor = '#F09595';
+                document.getElementById('d-mag').textContent = sismoMasCercano.mag + ' Mw';
+                document.getElementById('d-dist').textContent = sismoMasCercano.distancia + ' km';
+                document.getElementById('d-lugar').textContent = sismoMasCercano.lugar;
+                document.getElementById('d-hora').textContent = sismoMasCercano.hora + ' hrs';
+            } else {
+                box.style.background = '#EAF3DE';
+                box.style.borderColor = '#639922';
+                dot.style.background = '#639922';
+                dot.style.animation = 'none';
+                titulo.textContent = 'Sin sismos cercanos';
+                titulo.style.color = '#27500A';
+                texto.textContent = `Tu ubicación está fuera del radio de ${RADIO_KM} km. Todo tranquilo.`;
+                texto.style.color = '#3B6D11';
+                detalle.style.display = 'none';
+            }
+        }
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                pos => verificarCercania(pos.coords.latitude, pos.coords.longitude),
+                err => {
+                    const caja = document.getElementById('alerta-sismo');
+                    caja.style.display = 'block';
+                    document.getElementById('alerta-box').innerHTML =
+                        '<p style="font-size:13px;color:#888;margin:0">No se pudo obtener tu ubicación para verificar cercanía a sismos.</p>';
+                }
+            );
+        }
+    </script>
+
+</body>
+
+</html>
