@@ -10,7 +10,6 @@
             height: 500px;
             border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
         .card {
@@ -75,10 +74,10 @@
                         {% for s in sismos %}
                         <div class="list-group-item">
                             <div class="d-flex w-100 justify-content-between">
-                                <h5 class="mb-1 text-danger">{{ s[2] }} Mag</h5>
-                                <small class="text-muted">{{ s[1].strftime('%H:%M') if s[1] else '--:--' }}</small>
+                                <h5 class="mb-1 text-danger">{{ s.mag }} Mag</h5>
+                                <small class="text-muted">{{ s.hora }}</small>
                             </div>
-                            <p class="mb-1 small text-secondary">{{ s[5] }}</p>
+                            <p class="mb-1 small text-secondary">{{ s.lugar }}</p>
                         </div>
                         {% endfor %}
                     </div>
@@ -88,7 +87,6 @@
     </div>
 
     <script id="sismos-data" type="application/json">{{ sismos_json | safe }}</script>
-
     <script>
         const RADIO_KM = 100;
         const sismos = JSON.parse(document.getElementById('sismos-data').textContent);
@@ -111,43 +109,28 @@
             const texto = document.getElementById('alerta-texto');
             const detalle = document.getElementById('alerta-detalle');
 
-            let sismoMasCercano = null;
-            let distanciaMinima = Infinity;
-
+            let cercano = null, minDist = Infinity;
             for (const s of sismos) {
                 const dist = calcularDistancia(userLat, userLon, s.lat, s.lon);
-                if (dist < distanciaMinima) {
-                    distanciaMinima = dist;
-                    sismoMasCercano = { ...s, distancia: Math.round(dist) };
-                }
+                if (dist < minDist) { minDist = dist; cercano = { ...s, distancia: Math.round(dist) }; }
             }
 
             caja.style.display = 'block';
-
-            if (sismoMasCercano && distanciaMinima <= RADIO_KM) {
-                box.style.background = '#FCEBEB';
-                box.style.borderColor = '#E24B4A';
-                dot.style.background = '#E24B4A';
-                dot.style.animation = 'pulse 1.4s ease-in-out infinite';
-                titulo.textContent = 'Sismo cercano detectado';
-                titulo.style.color = '#791F1F';
-                texto.textContent = `Hay un sismo a ${sismoMasCercano.distancia} km de tu ubicación actual.`;
-                texto.style.color = '#A32D2D';
+            if (cercano && minDist <= RADIO_KM) {
+                box.style.background = '#FCEBEB'; box.style.borderColor = '#E24B4A';
+                dot.style.background = '#E24B4A'; dot.style.animation = 'pulse 1.4s ease-in-out infinite';
+                titulo.textContent = 'Sismo cercano detectado'; titulo.style.color = '#791F1F';
+                texto.textContent = `Hay un sismo a ${cercano.distancia} km de tu ubicación.`;
                 detalle.style.display = 'block';
-                detalle.style.borderColor = '#F09595';
-                document.getElementById('d-mag').textContent = sismoMasCercano.mag + ' Mw';
-                document.getElementById('d-dist').textContent = sismoMasCercano.distancia + ' km';
-                document.getElementById('d-lugar').textContent = sismoMasCercano.lugar;
-                document.getElementById('d-hora').textContent = sismoMasCercano.hora + ' hrs';
+                document.getElementById('d-mag').textContent = cercano.mag + ' Mw';
+                document.getElementById('d-dist').textContent = cercano.distancia + ' km';
+                document.getElementById('d-lugar').textContent = cercano.lugar;
+                document.getElementById('d-hora').textContent = cercano.hora + ' hrs';
             } else {
-                box.style.background = '#EAF3DE';
-                box.style.borderColor = '#639922';
-                dot.style.background = '#639922';
-                dot.style.animation = 'none';
-                titulo.textContent = 'Sin sismos cercanos';
-                titulo.style.color = '#27500A';
-                texto.textContent = `Tu ubicación está fuera del radio de ${RADIO_KM} km. Todo tranquilo.`;
-                texto.style.color = '#3B6D11';
+                box.style.background = '#EAF3DE'; box.style.borderColor = '#639922';
+                dot.style.background = '#639922'; dot.style.animation = 'none';
+                titulo.textContent = 'Sin sismos cercanos'; titulo.style.color = '#27500A';
+                texto.textContent = `Fuera del radio de ${RADIO_KM} km. Todo tranquilo.`;
                 detalle.style.display = 'none';
             }
         }
@@ -156,15 +139,13 @@
             navigator.geolocation.getCurrentPosition(
                 pos => verificarCercania(pos.coords.latitude, pos.coords.longitude),
                 err => {
-                    const caja = document.getElementById('alerta-sismo');
-                    caja.style.display = 'block';
+                    document.getElementById('alerta-sismo').style.display = 'block';
                     document.getElementById('alerta-box').innerHTML =
-                        '<p style="font-size:13px;color:#888;margin:0">No se pudo obtener tu ubicación para verificar cercanía a sismos.</p>';
+                        '<p style="font-size:13px;color:#888;margin:0">No se pudo obtener tu ubicación.</p>';
                 }
             );
         }
     </script>
-
 </body>
 
 </html>
