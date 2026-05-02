@@ -3,17 +3,119 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Sismos Chile Monitor</title>
+    <title>Monitor Global de Desastres</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        body {
+            background: #000000;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .titulo-eventos {
+            color: #ff3b3b !important;
+            opacity: 1 !important;
+            filter: none !important;
+            text-shadow: 0 0 6px rgba(255, 59, 59, 0.6);
+        }
+
+        .col-lg-4 h6 {
+            color: #ff3b3b !important;
+        }
+
+        .navbar-brand {
+            letter-spacing: .5px;
+            font-size: 1.1rem;
+        }
+
         .map-container {
-            height: 500px;
-            border-radius: 15px;
+            height: 520px;
+            border-radius: 12px;
             overflow: hidden;
         }
 
-        .card {
-            border-radius: 15px;
+        .stat-card {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 10px;
+            padding: 12px 16px;
+            text-align: center;
+        }
+
+        .stat-card .num {
+            font-size: 1.6rem;
+            font-weight: 700;
+        }
+
+        .stat-card .lbl {
+            font-size: .72rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .tipo-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: .75rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            color: #fff;
+        }
+
+        .tipo-badge.active {
+            outline: 2px solid #fff;
+        }
+
+        .evento-item {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            transition: border-color .2s;
+        }
+
+        .evento-item:hover {
+            border-color: #444;
+        }
+
+        .evento-item .mag {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .evento-item .hora {
+            font-size: .72rem;
+            color: #888;
+        }
+
+        .evento-item .lugar {
+            font-size: .8rem;
+            color: #aaa;
+            margin-top: 2px;
+        }
+
+        #alerta-sismo {
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #111;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 3px;
         }
 
         @keyframes pulse {
@@ -24,83 +126,145 @@
             }
 
             50% {
-                opacity: .5
+                opacity: .4
             }
         }
     </style>
 </head>
 
-<body class="bg-light">
+<body>
 
-    <nav class="navbar navbar-dark bg-danger mb-4 shadow">
-        <div class="container">
-            <span class="navbar-brand mb-0 h1">🇨🇱 Monitor de Sismos - Actividad 4</span>
+    <nav class="navbar navbar-dark mb-4 shadow" style="background:#111;border-bottom:1px solid #222">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand mb-0 h1">🌍 Monitor Global de Desastres</span>
+            <span class="text-muted" style="font-size:.8rem">USGS · NASA FIRMS · NOAA · GDACS</span>
         </div>
     </nav>
 
-    <div id="alerta-sismo" style="display:none" class="container mb-3">
-        <div id="alerta-box" class="p-3 rounded-3 border">
-            <div class="d-flex align-items-center gap-2 mb-2">
-                <span id="alerta-dot" style="width:12px;height:12px;border-radius:50%;display:inline-block"></span>
-                <strong id="alerta-titulo" style="font-size:15px"></strong>
-            </div>
-            <div id="alerta-texto" style="font-size:13px" class="mb-2"></div>
-            <div id="alerta-detalle"
-                style="display:none;font-size:13px;background:white;border-radius:8px;padding:10px 12px">
-                <div class="row g-2">
-                    <div class="col-6"><small class="text-muted d-block">Magnitud</small><strong id="d-mag"></strong>
+    <div class="container-fluid px-4">
+
+        <!-- Alerta de proximidad -->
+        <div id="alerta-sismo" style="display:none" class="mb-3">
+            <div id="alerta-box" class="p-3" style="border-radius:10px;border:1px solid #333">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span id="alerta-dot" style="width:10px;height:10px;border-radius:50%;display:inline-block"></span>
+                    <strong id="alerta-titulo" style="font-size:.9rem"></strong>
+                </div>
+                <div id="alerta-texto" style="font-size:.8rem"></div>
+                <div id="alerta-detalle"
+                    style="display:none;margin-top:10px;font-size:.8rem;background:#111;border-radius:6px;padding:10px">
+                    <div class="row g-2">
+                        <div class="col-4"><small class="text-muted d-block">Tipo</small><strong id="d-tipo"></strong>
+                        </div>
+                        <div class="col-4"><small class="text-muted d-block">Magnitud</small><strong
+                                id="d-mag"></strong></div>
+                        <div class="col-4"><small class="text-muted d-block">Distancia</small><strong
+                                id="d-dist"></strong></div>
+                        <div class="col-12"><small class="text-muted d-block">Lugar</small><span id="d-lugar"></span>
+                        </div>
                     </div>
-                    <div class="col-6"><small class="text-muted d-block">Distancia</small><strong id="d-dist"></strong>
-                    </div>
-                    <div class="col-12"><small class="text-muted d-block">Lugar</small><span id="d-lugar"></span></div>
-                    <div class="col-12"><small class="text-muted d-block">Hora</small><span id="d-hora"></span></div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-8 mb-4">
-                <div class="card p-3 shadow-sm bg-white">
-                    <h4 class="mb-3">Mapa de Actividad</h4>
+        <!-- Estadísticas rápidas -->
+        <div class="row g-2 mb-3">
+            <div class="col-6 col-md-2">
+                <div class="stat-card">
+                    <div class="num text-warning">{{ estadisticas.get('total', 0) }}</div>
+                    <div class="lbl">Total eventos</div>
+                </div>
+            </div>
+            {% for tipo, cnt in por_tipo.items() %}
+            {% set cfg = tipo_config.get(tipo, tipo_config['otro']) %}
+            <div class="col-6 col-md-2">
+                <div class="stat-card">
+                    <div class="num" style="color:{{ cfg['color'] }}">{{ cnt }}</div>
+                    <div class="lbl">{{ cfg['icon'] }} {{ cfg['label'] }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Filtros por tipo -->
+        <div class="d-flex flex-wrap gap-2 mb-3" id="filtros">
+            <button class="tipo-badge active" data-tipo="todos" style="background:#444">
+                🌐 Todos
+            </button>
+            {% for tipo, cfg in tipo_config.items() %}
+            <button class="tipo-badge" data-tipo="{{ tipo }}"
+                style="background:{{ cfg['color'] }}88;border:1px solid {{ cfg['color'] }}">
+                {{ cfg['icon'] }} {{ cfg['label'] }}
+            </button>
+            {% endfor %}
+        </div>
+
+        <!-- Mapa + Lista -->
+        <div class="row g-3">
+            <div class="col-lg-8">
+                <div class="card p-2 shadow-sm" style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px">
                     <div class="map-container">{{ mapa|safe }}</div>
                 </div>
             </div>
+
             <div class="col-lg-4">
-                <div class="card p-3 shadow-sm bg-white">
-                    <h4 class="mb-3">Últimos Eventos</h4>
-                    <div class="list-group list-group-flush" style="max-height:450px;overflow-y:auto;">
-                        {% for s in sismos %}
-                        <div class="list-group-item">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h5 class="mb-1 text-danger">{{ s.mag }} Mag</h5>
-                                <small class="text-muted">{{ s.hora }}</small>
-                            </div>
-                            <p class="mb-1 small text-secondary">{{ s.lugar }}</p>
+                <div>
+                    <h6 class="titulo-eventos">
+                        Últimos eventos
+                    </h6>
+                </div>
+                <div id="lista-eventos" style="max-height:520px;overflow-y:auto">
+                    {% for d in desastres %}
+                    {% set cfg = tipo_config.get(d['tipo'], tipo_config['otro']) %}
+                    <div class="evento-item" data-tipo="{{ d['tipo'] }}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <span class="mag" style="color:{{ cfg['color'] }}">
+                                {{ cfg['icon'] }}
+                                {% if d['magnitud'] %}{{ "%.1f"|format(d['magnitud']) }}{% endif %}
+                            </span>
+                            <span class="hora">{{ (d['fecha'] or '')[:16] }}</span>
                         </div>
-                        {% endfor %}
+                        <div class="lugar">{{ d['lugar'] }}</div>
+                        <div class="mt-1">
+                            <span class="badge"
+                                style="background:{{ cfg['color'] }}22;color:{{ cfg['color'] }};font-size:.68rem">
+                                {{ cfg['label'] }}
+                            </span>
+                            <span class="text-muted" style="font-size:.7rem"> · {{ d['fuente'] }}</span>
+                        </div>
                     </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
+
     </div>
 
-    <script id="sismos-data" type="application/json">{{ sismos_json | safe }}</script>
+    <script id="desastres-data" type="application/json">{{ desastres_json|safe }}</script>
     <script>
-        const RADIO_KM = 100;
-        const sismos = JSON.parse(document.getElementById('sismos-data').textContent);
+        const RADIO_KM = 150;
+        const desastres = JSON.parse(document.getElementById('desastres-data').textContent);
 
-        function calcularDistancia(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) ** 2 +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLon / 2) ** 2;
+        // Filtros
+        document.querySelectorAll('.tipo-badge').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tipo-badge').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const tipo = btn.dataset.tipo;
+                document.querySelectorAll('#lista-eventos .evento-item').forEach(item => {
+                    item.style.display = (tipo === 'todos' || item.dataset.tipo === tipo) ? '' : 'none';
+                });
+            });
+        });
+
+        // Haversine
+        function dist(lat1, lon1, lat2, lon2) {
+            const R = 6371, dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         }
 
+        // Alerta proximidad
         function verificarCercania(userLat, userLon) {
             const caja = document.getElementById('alerta-sismo');
             const box = document.getElementById('alerta-box');
@@ -110,27 +274,28 @@
             const detalle = document.getElementById('alerta-detalle');
 
             let cercano = null, minDist = Infinity;
-            for (const s of sismos) {
-                const dist = calcularDistancia(userLat, userLon, s.lat, s.lon);
-                if (dist < minDist) { minDist = dist; cercano = { ...s, distancia: Math.round(dist) }; }
+            for (const d of desastres) {
+                if (d.lat == null || d.lon == null) continue;
+                const km = dist(userLat, userLon, d.lat, d.lon);
+                if (km < minDist) { minDist = km; cercano = { ...d, distancia: Math.round(km) }; }
             }
 
             caja.style.display = 'block';
             if (cercano && minDist <= RADIO_KM) {
-                box.style.background = '#FCEBEB'; box.style.borderColor = '#E24B4A';
-                dot.style.background = '#E24B4A'; dot.style.animation = 'pulse 1.4s ease-in-out infinite';
-                titulo.textContent = 'Sismo cercano detectado'; titulo.style.color = '#791F1F';
-                texto.textContent = `Hay un sismo a ${cercano.distancia} km de tu ubicación.`;
+                box.style.background = '#2a0a0a'; box.style.borderColor = '#e74c3c';
+                dot.style.background = '#e74c3c'; dot.style.animation = 'pulse 1.4s ease-in-out infinite';
+                titulo.textContent = `⚠️ Evento cercano: ${cercano.tipo}`; titulo.style.color = '#e74c3c';
+                texto.textContent = `Hay un ${cercano.tipo} a ${cercano.distancia} km de tu ubicación.`;
                 detalle.style.display = 'block';
-                document.getElementById('d-mag').textContent = cercano.mag + ' Mw';
+                document.getElementById('d-tipo').textContent = cercano.tipo;
+                document.getElementById('d-mag').textContent = cercano.magnitud ? cercano.magnitud.toFixed(1) : '—';
                 document.getElementById('d-dist').textContent = cercano.distancia + ' km';
                 document.getElementById('d-lugar').textContent = cercano.lugar;
-                document.getElementById('d-hora').textContent = cercano.hora + ' hrs';
             } else {
-                box.style.background = '#EAF3DE'; box.style.borderColor = '#639922';
-                dot.style.background = '#639922'; dot.style.animation = 'none';
-                titulo.textContent = 'Sin sismos cercanos'; titulo.style.color = '#27500A';
-                texto.textContent = `Fuera del radio de ${RADIO_KM} km. Todo tranquilo.`;
+                box.style.background = '#0a1a0a'; box.style.borderColor = '#27ae60';
+                dot.style.background = '#27ae60'; dot.style.animation = 'none';
+                titulo.textContent = '✅ Sin eventos cercanos'; titulo.style.color = '#27ae60';
+                texto.textContent = `Radio de ${RADIO_KM} km despejado.`;
                 detalle.style.display = 'none';
             }
         }
@@ -138,10 +303,10 @@
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 pos => verificarCercania(pos.coords.latitude, pos.coords.longitude),
-                err => {
+                () => {
                     document.getElementById('alerta-sismo').style.display = 'block';
                     document.getElementById('alerta-box').innerHTML =
-                        '<p style="font-size:13px;color:#888;margin:0">No se pudo obtener tu ubicación.</p>';
+                        '<p style="font-size:.8rem;color:#666;margin:0">📍 No se pudo obtener tu ubicación.</p>';
                 }
             );
         }
